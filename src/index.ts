@@ -1,5 +1,4 @@
 import { MailplexCore } from './application/use-cases/MailplexCore';
-import { MailplexConfig } from './domain/value-objects/MailplexConfig';
 
 export { MailplexConfig } from './domain/value-objects/MailplexConfig';
 export { IMailplexCore } from './application/interfaces/IMailplexCore';
