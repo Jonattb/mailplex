@@ -1,0 +1,7 @@
+import { MailplexConfig } from '../../domain/value-objects/MailplexConfig';
+
+export interface IMailplexCore {
+  configure(config: MailplexConfig): IMailplexCore;
+  run(): Promise<void>;
+  stop(): Promise<void>;
+}

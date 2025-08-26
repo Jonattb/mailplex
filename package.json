@@ -1,0 +1,34 @@
+{
+  "name": "mailplex",
+  "version": "1.0.0",
+  "description": "Core email framework with DDD architecture",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "email",
+    "framework",
+    "typescript",
+    "ddd"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "eta": "^3.5.0",
+    "h3": "^1.15.4"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "typescript": "^5.9.2"
+  },
+  "files": [
+    "dist/**/*",
+    "package.json",
+    "README.md"
+  ]
+}
