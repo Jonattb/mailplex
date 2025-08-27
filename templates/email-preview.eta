@@ -16,6 +16,35 @@
         .sidebar a { display: block; padding: 15px 20px; text-decoration: none; color: #333; }
         .sidebar a:hover { background: #e9e9e9; }
         .sidebar a.active { background: #007acc; color: white; }
+        .folder { margin-left: 0; }
+        .folder-header { 
+            display: flex; 
+            align-items: center; 
+            padding: 10px 20px; 
+            background: #e0e0e0; 
+            cursor: pointer; 
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+        .folder-header:hover { background: #d5d5d5; }
+        .folder-icon { 
+            margin-right: 8px; 
+            width: 16px; 
+            text-align: center;
+            font-family: monospace;
+        }
+        .folder-content { 
+            display: none;
+        }
+        .folder-content.expanded { 
+            display: block; 
+        }
+        .folder-content .sidebar ul { 
+            margin-left: 20px; 
+        }
+        .file-item {
+            padding-left: 40px;
+        }
         .preview-content { padding: 20px; }
         .no-preview { color: #666; text-align: center; margin-top: 50px; }
         iframe { width: 100%; height: calc(100vh - 40px); border: none; }
@@ -26,16 +55,8 @@
         <div class="sidebar">
             <h2>Email Templates</h2>
             <ul>
-                <% if (it.emailFiles && it.emailFiles.length > 0) { %>
-                    <% it.emailFiles.forEach(function(file){ %>
-                        <li>
-                            <a href="/?preview=<%= file.name %>" 
-                               class="<%= it.selectedEmail === file.name ? 'active' : '' %>">
-                                <%= file.name %>
-                            </a>
-                        </li>
-                    <% }) %>
-                <% } else { %>
+                <%~ include('folder-structure', it.emailStructure) %>
+                <% if (it.emailStructure.files.length === 0 && it.emailStructure.folders.length === 0) { %>
                     <li style="padding: 20px; color: #666;">No email templates found</li>
                 <% } %>
             </ul>
@@ -48,5 +69,36 @@
             <% } %>
         </div>
     </div>
+
+    <script>
+        function toggleFolder(header) {
+            const folderContent = header.nextElementSibling;
+            const icon = header.querySelector('.folder-icon');
+            
+            if (folderContent.classList.contains('expanded')) {
+                folderContent.classList.remove('expanded');
+                icon.textContent = '▶';
+            } else {
+                folderContent.classList.add('expanded');
+                icon.textContent = '▼';
+            }
+        }
+
+        // Auto-expand folders that contain the currently selected email
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeLink = document.querySelector('.sidebar a.active');
+            if (activeLink) {
+                let parent = activeLink.closest('.folder-content');
+                while (parent) {
+                    parent.classList.add('expanded');
+                    const header = parent.previousElementSibling;
+                    if (header && header.classList.contains('folder-header')) {
+                        header.querySelector('.folder-icon').textContent = '▼';
+                    }
+                    parent = parent.parentElement.closest('.folder-content');
+                }
+            }
+        });
+    </script>
 </body>
 </html>

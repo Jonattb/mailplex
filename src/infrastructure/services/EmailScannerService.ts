@@ -1,42 +1,89 @@
-import { readdir, readFile } from 'node:fs/promises';
-import { join, extname } from 'node:path';
+import { readdir, readFile, stat } from 'node:fs/promises';
+import { join, extname, relative } from 'node:path';
 
 export interface EmailFile {
   name: string;
   path: string;
+  relativePath: string;
   content?: string;
+}
+
+export interface EmailFolder {
+  name: string;
+  path: string;
+  files: EmailFile[];
+  subfolders: EmailFolder[];
+}
+
+export interface EmailStructure {
+  files: EmailFile[];
+  folders: EmailFolder[];
 }
 
 export class EmailScannerService {
   constructor(private emailsPath: string) {}
 
-  async scanEmails(): Promise<EmailFile[]> {
+  async scanEmails(): Promise<EmailStructure> {
     try {
-      const files = await readdir(this.emailsPath);
-      const emailFiles: EmailFile[] = [];
-
-      for (const file of files) {
-        if (extname(file) === '.html') {
-          emailFiles.push({
-            name: file,
-            path: join(this.emailsPath, file)
-          });
-        }
-      }
-
-      return emailFiles;
+      return await this.scanDirectory(this.emailsPath);
     } catch (error) {
       console.warn('Error scanning emails directory:', error);
-      return [];
+      return { files: [], folders: [] };
     }
   }
 
-  async getEmailContent(filename: string): Promise<string | null> {
+  private async scanDirectory(dirPath: string): Promise<EmailStructure> {
+    const items = await readdir(dirPath);
+    const structure: EmailStructure = { files: [], folders: [] };
+
+    for (const item of items) {
+      const fullPath = join(dirPath, item);
+      const itemStat = await stat(fullPath);
+
+      if (itemStat.isDirectory()) {
+        const folderStructure = await this.scanDirectory(fullPath);
+        structure.folders.push({
+          name: item,
+          path: fullPath,
+          files: folderStructure.files,
+          subfolders: folderStructure.folders
+        });
+      } else if (extname(item) === '.html') {
+        structure.files.push({
+          name: item,
+          path: fullPath,
+          relativePath: relative(this.emailsPath, fullPath)
+        });
+      }
+    }
+
+    return structure;
+  }
+
+  async getAllEmailFiles(): Promise<EmailFile[]> {
+    const structure = await this.scanEmails();
+    return this.flattenStructure(structure);
+  }
+
+  private flattenStructure(structure: EmailStructure): EmailFile[] {
+    let allFiles: EmailFile[] = [...structure.files];
+    
+    for (const folder of structure.folders) {
+      allFiles = allFiles.concat(this.flattenStructure({
+        files: folder.files,
+        folders: folder.subfolders
+      }));
+    }
+    
+    return allFiles;
+  }
+
+  async getEmailContent(relativePath: string): Promise<string | null> {
     try {
-      const filePath = join(this.emailsPath, filename);
+      const filePath = join(this.emailsPath, relativePath);
       return await readFile(filePath, 'utf-8');
     } catch (error) {
-      console.warn('Error reading email file:', filename, error);
+      console.warn('Error reading email file:', relativePath, error);
       return null;
     }
   }

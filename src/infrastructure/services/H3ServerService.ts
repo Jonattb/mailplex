@@ -2,7 +2,7 @@ import { createApp, createRouter, eventHandler, toNodeListener, getQuery } from 
 import { createServer, Server } from 'node:http';
 import { Eta } from 'eta';
 import { join } from 'node:path';
-import { EmailScannerService } from './EmailScannerService';
+import { EmailScannerService, EmailStructure } from './EmailScannerService';
 import { EmailPreprocessorService } from '../../domain/services/EmailPreprocessorService';
 
 export class H3ServerService {
@@ -28,11 +28,11 @@ export class H3ServerService {
   private setupRoutes(): void {
     this.router.get('/', eventHandler(async (event) => {
       if (!this.emailScanner) {
-        return await this.getPreviewInterface([]);
+        return await this.getPreviewInterface({ files: [], folders: [] });
       }
 
       const query = getQuery(event);
-      const emailFiles = await this.emailScanner.scanEmails();
+      const emailStructure = await this.emailScanner.scanEmails();
       
       if (query.preview) {
         const content = await this.emailScanner.getEmailContent(query.preview as string);
@@ -40,11 +40,11 @@ export class H3ServerService {
           const preprocessor = new EmailPreprocessorService();
           const processedContent = preprocessor.processTemplate(content);
           
-          return await this.getPreviewInterface(emailFiles, query.preview as string, processedContent);
+          return await this.getPreviewInterface(emailStructure, query.preview as string, processedContent);
         }
       }
       
-      return await this.getPreviewInterface(emailFiles);
+      return await this.getPreviewInterface(emailStructure);
     }));
 
     this.router.get('/health', eventHandler(() => {
@@ -52,11 +52,11 @@ export class H3ServerService {
     }));
   }
 
-  private async getPreviewInterface(emailFiles: Array<{name: string, path: string}>, selectedEmail?: string, previewContent?: string): Promise<string> {
+  private async getPreviewInterface(emailStructure: EmailStructure, selectedEmail?: string, previewContent?: string): Promise<string> {
     const escapedContent = previewContent?.replace(/"/g, '&quot;');
 
     return this.eta.render('email-preview', {
-      emailFiles,
+      emailStructure,
       selectedEmail,
       previewContent: escapedContent
     });

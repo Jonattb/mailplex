@@ -1,0 +1,38 @@
+<% 
+// Render files in current directory
+if (it.files && it.files.length > 0) {
+    it.files.forEach(function(file) { 
+%>
+        <li>
+            <a href="/?preview=<%= file.relativePath %>" 
+               class="<%= it.selectedEmail === file.relativePath ? 'active' : '' %>">
+                📄 <%= file.name %>
+            </a>
+        </li>
+<% 
+    });
+}
+
+// Render folders
+if (it.folders && it.folders.length > 0) {
+    it.folders.forEach(function(folder) { 
+%>
+        <li class="folder">
+            <div class="folder-header" onclick="toggleFolder(this)">
+                <span class="folder-icon">▶</span>
+                📁 <%= folder.name %>
+            </div>
+            <div class="folder-content">
+                <ul>
+                    <%~ include('folder-structure', {
+                        files: folder.files,
+                        folders: folder.subfolders,
+                        selectedEmail: it.selectedEmail
+                    }) %>
+                </ul>
+            </div>
+        </li>
+<% 
+    });
+}
+%>
