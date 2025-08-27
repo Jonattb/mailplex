@@ -44,11 +44,4 @@ export class MailplexCore implements IMailplexCore {
     }
   }
 
-  getTemplateService(): TemplateService | undefined {
-    return this.templateService;
-  }
-
-  getServerService(): H3ServerService | undefined {
-    return this.serverService;
-  }
 }

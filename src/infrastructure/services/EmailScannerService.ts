@@ -60,23 +60,6 @@ export class EmailScannerService {
     return structure;
   }
 
-  async getAllEmailFiles(): Promise<EmailFile[]> {
-    const structure = await this.scanEmails();
-    return this.flattenStructure(structure);
-  }
-
-  private flattenStructure(structure: EmailStructure): EmailFile[] {
-    let allFiles: EmailFile[] = [...structure.files];
-    
-    for (const folder of structure.folders) {
-      allFiles = allFiles.concat(this.flattenStructure({
-        files: folder.files,
-        folders: folder.subfolders
-      }));
-    }
-    
-    return allFiles;
-  }
 
   async getEmailContent(relativePath: string): Promise<string | null> {
     try {

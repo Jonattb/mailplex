@@ -26,8 +26,4 @@ export class TemplateService {
     return this.eta.renderString(templateString, data);
   }
 
-  setTemplatesPath(path: string): void {
-    this.templatesPath = path;
-    this.eta.configure({ views: path });
-  }
 }
