@@ -3,7 +3,6 @@ import { createServer, Server } from 'node:http';
 import { Eta } from 'eta';
 import { join } from 'node:path';
 import { EmailScannerService, EmailStructure } from './EmailScannerService';
-import { EmailPreprocessorService } from '../../domain/services/EmailPreprocessorService';
 
 export class H3ServerService {
   private server?: Server;
@@ -37,10 +36,7 @@ export class H3ServerService {
       if (query.preview) {
         const content = await this.emailScanner.getEmailContent(query.preview as string);
         if (content) {
-          const preprocessor = new EmailPreprocessorService();
-          const processedContent = preprocessor.processTemplate(content);
-          
-          return await this.getPreviewInterface(emailStructure, query.preview as string, processedContent);
+          return await this.getPreviewInterface(emailStructure, query.preview as string, content);
         }
       }
       
