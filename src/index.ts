@@ -1,9 +1,9 @@
-import { MailplexCore } from './application/use-cases/MailplexCore';
+import { MailplexCore } from './application/use-cases/MailplexCore.js';
 
-export { MailplexConfig } from './domain/value-objects/MailplexConfig';
-export { IMailplexCore } from './application/interfaces/IMailplexCore';
-export { TemplateService } from './infrastructure/services/TemplateService';
-export { H3ServerService } from './infrastructure/services/H3ServerService';
+export { MailplexConfig } from './domain/value-objects/MailplexConfig.js';
+export { IMailplexCore } from './application/interfaces/IMailplexCore.js';
+export { TemplateService } from './infrastructure/services/TemplateService.js';
+export { H3ServerService } from './infrastructure/services/H3ServerService.js';
 
 export function createMailplex(): MailplexCore {
   return new MailplexCore();

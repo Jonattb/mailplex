@@ -1,7 +1,7 @@
-import { IMailplexCore } from '../interfaces/IMailplexCore';
-import { MailplexConfig, MailplexConfigValidator } from '../../domain/value-objects/MailplexConfig';
-import { H3ServerService } from '../../infrastructure/services/H3ServerService';
-import { TemplateService } from '../../infrastructure/services/TemplateService';
+import { IMailplexCore } from '../interfaces/IMailplexCore.js';
+import { MailplexConfig, MailplexConfigValidator } from '../../domain/value-objects/MailplexConfig.js';
+import { H3ServerService } from '../../infrastructure/services/H3ServerService.js';
+import { TemplateService } from '../../infrastructure/services/TemplateService.js';
 
 export class MailplexCore implements IMailplexCore {
   private config?: MailplexConfig;

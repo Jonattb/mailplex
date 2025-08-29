@@ -1,8 +1,10 @@
 import { createApp, createRouter, eventHandler, toNodeListener, getQuery } from 'h3';
 import { createServer, Server } from 'node:http';
 import { Eta } from 'eta';
-import { join } from 'node:path';
-import { EmailScannerService, EmailStructure } from './EmailScannerService';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { EmailScannerService, EmailStructure } from './EmailScannerService.js';
+import { EmailPreprocessorService } from '../../domain/services/EmailPreprocessorService.js';
 
 export class H3ServerService {
   private server?: Server;
@@ -12,6 +14,9 @@ export class H3ServerService {
   private eta: Eta;
 
   constructor(private port: number = 3000, private host: string = 'localhost') {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    
     this.eta = new Eta({ 
       views: join(__dirname, '../../../templates'),
       cache: false
@@ -36,7 +41,10 @@ export class H3ServerService {
       if (query.preview) {
         const content = await this.emailScanner.getEmailContent(query.preview as string);
         if (content) {
-          return await this.getPreviewInterface(emailStructure, query.preview as string, content);
+          const preprocessor = new EmailPreprocessorService();
+          const processedContent = preprocessor.processTemplate(content);
+          
+          return await this.getPreviewInterface(emailStructure, query.preview as string, processedContent);
         }
       }
       
