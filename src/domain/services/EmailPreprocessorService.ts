@@ -5,7 +5,9 @@ export class EmailPreprocessorService {
 
   processTemplate(template: string): string {
     try {
-      return this.processPrintDirectives(template);
+      // First process loop directives, then print directives
+      const withLoops = this.processLoopDirectives(template);
+      return this.processPrintDirectives(withLoops);
     } catch (error) {
       console.error('Preprocessor error:', error);
       return template;
@@ -214,5 +216,39 @@ export class EmailPreprocessorService {
       }
       return value;
     }
+  }
+
+  private processLoopDirectives(template: string): string {
+    console.log('Processing loop directives...');
+    
+    // Process {{loop N}} ... {{/loop}} patterns
+    const result = template.replace(/\{\{loop\s+(\d+)\}\}([\s\S]*?)\{\{\/loop\}\}/g, (match, count, content) => {
+      console.log(`Found loop: count=${count}, content length=${content.length}`);
+      
+      const iterations = parseInt(count, 10);
+      if (isNaN(iterations) || iterations <= 0) {
+        console.warn(`Invalid loop count: ${count}`);
+        return match;
+      }
+      
+      // Repeat the content N times, replacing {{_index}} with current iteration
+      let result = '';
+      for (let i = 0; i < iterations; i++) {
+        // Replace {{_index}} with the current index (0-based)
+        // Replace {{_index1}} with 1-based index if needed
+        let indexedContent = content;
+        
+        // Replace _index1 first (to avoid conflicts)
+        indexedContent = indexedContent.replace(/\{\{_index1\}\}/g, (i + 1).toString());
+        indexedContent = indexedContent.replace(/\{\{_index\}\}/g, i.toString());
+        
+        result += indexedContent;
+      }
+      
+      return result;
+    });
+    
+    console.log(`Template processed: ${result.length} characters`);
+    return result;
   }
 }
