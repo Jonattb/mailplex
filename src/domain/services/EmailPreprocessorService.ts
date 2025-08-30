@@ -1,99 +1,34 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { DEFAULT_CUSTOM_DATA } from '../constants/DefaultVariables.js';
+
 
 export class EmailPreprocessorService {
-  private readonly namesList = ['Ana', 'Carlos', 'María', 'José', 'Laura', 'Miguel', 'Carmen', 'Antonio', 'Isabel', 'Francisco'];
-  private readonly lastNamesList = ['García', 'Rodríguez', 'González', 'Fernández', 'López', 'Martínez', 'Sánchez', 'Pérez', 'Gómez', 'Martín'];
-  private readonly companiesList = ['TechCorp', 'InnovaSoft', 'DataPro', 'CloudTech', 'DevStudio', 'WebFlow', 'AppLab', 'CodeWorks', 'DigitalHub', 'NetSolutions'];
-  private readonly productsList = ['Smartphone Pro', 'Laptop Ultra', 'Tablet Max', 'Monitor 4K', 'Auriculares Pro', 'Cámara Digital', 'Smartwatch', 'Teclado RGB', 'Mouse Gaming', 'Altavoz Bluetooth'];
-  private readonly citiesList = ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Bilbao', 'Alicante'];
 
   private getRandomFromArray(arr: string[]): string {
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  private getRandomNumber(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  private getRandomPrice(): string {
-    return (Math.random() * 999 + 1).toFixed(2);
-  }
-
-  private getRandomDate(): string {
-    const year = this.getRandomNumber(2024, 2025);
-    const month = this.getRandomNumber(1, 12).toString().padStart(2, '0');
-    const day = this.getRandomNumber(1, 28).toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
   private generateValue(param: string, customData?: { [key: string]: string | string[] | (() => string) }): string {
-    // First check custom data
-    if (customData && param in customData) {
-      const customValue = customData[param];
-      if (typeof customValue === 'function') {
-        return customValue();
-      } else if (Array.isArray(customValue)) {
-        return this.getRandomFromArray(customValue);
+    // Create merged data: defaults + custom (custom overrides defaults)
+    const mergedData = { ...DEFAULT_CUSTOM_DATA, ...customData };
+    
+    // Check merged data first
+    if (param in mergedData) {
+      const value = mergedData[param];
+      if (typeof value === 'function') {
+        return value();
+      } else if (Array.isArray(value)) {
+        return this.getRandomFromArray(value);
       } else {
-        return customValue;
+        return value;
       }
     }
     
-    // Fall back to default generation
-    switch (param.toLowerCase()) {
-      case 'first_name': return this.getRandomFromArray(this.namesList);
-      case 'last_name': return this.getRandomFromArray(this.lastNamesList);
-      case 'full_name': return `${this.getRandomFromArray(this.namesList)} ${this.getRandomFromArray(this.lastNamesList)}`;
-      case 'display_name': return `${this.getRandomFromArray(this.namesList)} ${this.getRandomFromArray(this.lastNamesList)[0]}.`;
-      case 'username': return `${this.getRandomFromArray(this.namesList).toLowerCase()}${this.getRandomNumber(10, 99)}`;
-      case 'email': return `${this.getRandomFromArray(this.namesList).toLowerCase()}.${this.getRandomFromArray(this.lastNamesList).toLowerCase()}@email.com`;
-      
-      case 'company': 
-      case 'company_name': return this.getRandomFromArray(this.companiesList);
-      case 'department': return this.getRandomFromArray(['Ventas', 'Marketing', 'IT', 'RRHH', 'Finanzas']);
-      case 'position': return this.getRandomFromArray(['Gerente', 'Analista', 'Coordinador', 'Especialista', 'Director']);
-      
-      case 'date': return this.getRandomDate();
-      case 'year': return this.getRandomNumber(2024, 2025).toString();
-      case 'month': return this.getRandomFromArray(['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio']);
-      case 'day': return this.getRandomNumber(1, 31).toString();
-      case 'time': return `${this.getRandomNumber(9, 18)}:${this.getRandomNumber(0, 59).toString().padStart(2, '0')}`;
-      
-      case 'age': return this.getRandomNumber(18, 65).toString();
-      case 'price': return this.getRandomPrice();
-      case 'quantity': return this.getRandomNumber(1, 10).toString();
-      case 'total': return (parseFloat(this.getRandomPrice()) * this.getRandomNumber(1, 5)).toFixed(2);
-      case 'discount': return this.getRandomNumber(5, 25).toString();
-      case 'tax': return this.getRandomFromArray(['21', '10', '4']);
-      
-      case 'product':
-      case 'product_name': return this.getRandomFromArray(this.productsList);
-      case 'category': return this.getRandomFromArray(['Electrónicos', 'Ropa', 'Hogar', 'Deportes', 'Libros']);
-      case 'brand': return this.getRandomFromArray(['Apple', 'Samsung', 'Sony', 'Nike', 'Adidas']);
-      case 'model': return `Pro-${this.getRandomNumber(2020, 2025)}`;
-      
-      case 'phone': return `+34 ${this.getRandomNumber(600, 699)} ${this.getRandomNumber(100, 999)} ${this.getRandomNumber(100, 999)}`;
-      case 'address': return `Calle ${this.getRandomFromArray(['Mayor', 'Principal', 'Central', 'Real'])} ${this.getRandomNumber(1, 200)}`;
-      case 'city': return this.getRandomFromArray(this.citiesList);
-      case 'country': return 'España';
-      case 'postal_code': return `${this.getRandomNumber(10, 50)}${this.getRandomNumber(100, 999)}`;
-      
-      case 'order_id': return `ORD-${this.getRandomNumber(1000, 9999)}`;
-      case 'invoice_id': return `INV-${this.getRandomNumber(1000, 9999)}`;
-      case 'customer_id': return `CUST-${this.getRandomNumber(100, 999)}`;
-      case 'transaction_id': return `TXN-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      
-      case 'status': return this.getRandomFromArray(['Activo', 'Pendiente', 'Completado', 'En Proceso']);
-      case 'priority': return this.getRandomFromArray(['Alta', 'Media', 'Baja']);
-      case 'type': return this.getRandomFromArray(['Premium', 'Estándar', 'Básico']);
-      case 'version': return `${this.getRandomNumber(1, 3)}.${this.getRandomNumber(0, 9)}.${this.getRandomNumber(0, 9)}`;
-      case 'code': return Math.random().toString(36).substr(2, 6).toUpperCase();
-      case 'reference': return `REF-${this.getRandomNumber(1000, 9999)}`;
-      
-      default: return param; // Return the parameter name if not found
-    }
+    // If not found in defaults or custom data, return the parameter name
+    return param;
   }
+
 
   processTemplate(template: string, emailsPath: string = './emails', componentsPath: string = './components', customData?: { [key: string]: string | string[] | (() => string) }): string {
     try {
@@ -309,10 +244,28 @@ export class EmailPreprocessorService {
   }
 
   private processIncludeDirectives(template: string, componentsPath: string, customData?: { [key: string]: string | string[] | (() => string) }): string {
-    console.log('Looking for include directives...');
+    console.log('Looking for include and component directives...');
+    
+    // Process {{component "component_name"}} patterns  
+    let result = template.replace(/\{\{component\s+['"]([^'"]+)['"]\}\}/g, (match, componentName) => {
+      console.log(`Found component directive: ${match}`);
+      try {
+        const componentPath = join(componentsPath, `${componentName}.html`);
+        console.log(`Reading component from: ${componentPath}`);
+        
+        const componentContent = readFileSync(componentPath, 'utf-8');
+        console.log(`Component content preview: ${componentContent.substring(0, 100)}`);
+        
+        // Recursively process the included component
+        return this.processTemplate(componentContent, componentsPath, componentsPath, customData);
+      } catch (error) {
+        console.warn(`Error including component ${componentName}:`, error);
+        return match; // Return original directive if error
+      }
+    });
     
     // Process {{include 'component_name'}} patterns
-    const result = template.replace(/\{\{include\s+['"]([^'"]+)['"]\}\}/g, (match, componentName) => {
+    result = result.replace(/\{\{include\s+['"]([^'"]+)['"]\}\}/g, (match, componentName) => {
       console.log(`Found include directive: ${match}`);
       try {
         const componentPath = join(componentsPath, `${componentName}.html`);
@@ -329,7 +282,9 @@ export class EmailPreprocessorService {
       }
     });
     
-    console.log(`Include processing done. Found ${template.match(/\{\{include\s+['"]([^'"]+)['"]\}\}/g)?.length || 0} includes`);
+    const includeCount = (template.match(/\{\{include\s+['"]([^'"]+)['"]\}\}/g) || []).length;
+    const componentCount = (template.match(/\{\{component\s+['"]([^'"]+)['"]\}\}/g) || []).length;
+    console.log(`Include processing done. Found ${componentCount} components and ${includeCount} includes`);
     return result;
   }
 

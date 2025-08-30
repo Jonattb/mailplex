@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { EmailScannerService, EmailStructure } from './EmailScannerService.js';
 import { ComponentScannerService, ComponentStructure } from './ComponentScannerService.js';
 import { EmailPreprocessorService } from '../../domain/services/EmailPreprocessorService.js';
+import { ValidationResult } from '../../domain/services/TemplateValidatorService.js';
 
 export class H3ServerService {
   private server?: Server;
@@ -55,6 +56,12 @@ export class H3ServerService {
         if (query.preview) {
           const content = await this.componentScanner.getComponentContent(query.preview as string);
           if (content) {
+            // Validate ONLY the original content before processing
+            const { TemplateValidatorService } = await import('../../domain/services/TemplateValidatorService.js');
+            const validator = new TemplateValidatorService(this.customData, './components');
+            const validation = await validator.validateTemplate(content);
+            
+            // Process template for rendering
             const preprocessor = new EmailPreprocessorService();
             const processedContent = preprocessor.processTemplate(
               content,
@@ -63,7 +70,7 @@ export class H3ServerService {
               this.customData
             );
             
-            return await this.getPreviewInterface(componentStructure, query.preview as string, processedContent, 'components');
+            return await this.getPreviewInterface(componentStructure, query.preview as string, processedContent, 'components', validation);
           }
         }
         
@@ -78,6 +85,12 @@ export class H3ServerService {
         if (query.preview) {
           const content = await this.emailScanner.getEmailContent(query.preview as string);
           if (content) {
+            // Validate ONLY the original content before processing
+            const { TemplateValidatorService } = await import('../../domain/services/TemplateValidatorService.js');
+            const validator = new TemplateValidatorService(this.customData, './components');
+            const validation = await validator.validateTemplate(content);
+            
+            // Process template for rendering
             const preprocessor = new EmailPreprocessorService();
             const processedContent = preprocessor.processTemplate(
               content,
@@ -86,7 +99,7 @@ export class H3ServerService {
               this.customData
             );
             
-            return await this.getPreviewInterface(emailStructure, query.preview as string, processedContent, 'emails');
+            return await this.getPreviewInterface(emailStructure, query.preview as string, processedContent, 'emails', validation);
           }
         }
         
@@ -99,14 +112,15 @@ export class H3ServerService {
     }));
   }
 
-  private async getPreviewInterface(structure: EmailStructure | ComponentStructure, selectedItem?: string, previewContent?: string, activeTab: string = 'emails'): Promise<string> {
+  private async getPreviewInterface(structure: EmailStructure | ComponentStructure, selectedItem?: string, previewContent?: string, activeTab: string = 'emails', validation?: ValidationResult): Promise<string> {
     const escapedContent = previewContent?.replace(/"/g, '&quot;');
 
     return this.eta.render('email-preview', {
       structure,
       selectedItem,
       previewContent: escapedContent,
-      activeTab
+      activeTab,
+      validation
     });
   }
 
