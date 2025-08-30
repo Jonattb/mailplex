@@ -8,6 +8,9 @@ export interface MailplexConfig {
     port?: number;
     host?: string;
   };
+  data?: {
+    [key: string]: string | string[] | (() => string);
+  };
 }
 
 export class MailplexConfigValidator {

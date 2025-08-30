@@ -12,6 +12,7 @@ export class H3ServerService {
   private router = createRouter();
   private emailScanner?: EmailScannerService;
   private eta: Eta;
+  private customData?: { [key: string]: string | string[] | (() => string) };
 
   constructor(private port: number = 3000, private host: string = 'localhost') {
     const __filename = fileURLToPath(import.meta.url);
@@ -29,6 +30,10 @@ export class H3ServerService {
     this.emailScanner = new EmailScannerService(emailsPath);
   }
 
+  setCustomData(customData?: { [key: string]: string | string[] | (() => string) }): void {
+    this.customData = customData;
+  }
+
   private setupRoutes(): void {
     this.router.get('/', eventHandler(async (event) => {
       if (!this.emailScanner) {
@@ -42,7 +47,12 @@ export class H3ServerService {
         const content = await this.emailScanner.getEmailContent(query.preview as string);
         if (content) {
           const preprocessor = new EmailPreprocessorService();
-          const processedContent = preprocessor.processTemplate(content);
+          const processedContent = preprocessor.processTemplate(
+            content,
+            './emails',
+            './components',
+            this.customData
+          );
           
           return await this.getPreviewInterface(emailStructure, query.preview as string, processedContent);
         }

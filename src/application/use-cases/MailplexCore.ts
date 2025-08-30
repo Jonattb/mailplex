@@ -20,8 +20,12 @@ export class MailplexCore implements IMailplexCore {
     
     this.templateService = new TemplateService(config.paths.emails);
     this.serverService.setEmailsPath(config.paths.emails);
+    this.serverService.setCustomData(config.data);
     
     console.log('Mailplex configured with paths:', config.paths);
+    if (config.data) {
+      console.log('Custom data configured:', Object.keys(config.data));
+    }
     return this;
   }
 
