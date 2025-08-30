@@ -4,6 +4,7 @@ import { Eta } from 'eta';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EmailScannerService, EmailStructure } from './EmailScannerService.js';
+import { ComponentScannerService, ComponentStructure } from './ComponentScannerService.js';
 import { EmailPreprocessorService } from '../../domain/services/EmailPreprocessorService.js';
 
 export class H3ServerService {
@@ -11,6 +12,7 @@ export class H3ServerService {
   private app = createApp();
   private router = createRouter();
   private emailScanner?: EmailScannerService;
+  private componentScanner?: ComponentScannerService;
   private eta: Eta;
   private customData?: { [key: string]: string | string[] | (() => string) };
 
@@ -30,35 +32,66 @@ export class H3ServerService {
     this.emailScanner = new EmailScannerService(emailsPath);
   }
 
+  setComponentsPath(componentsPath: string): void {
+    this.componentScanner = new ComponentScannerService(componentsPath);
+  }
+
   setCustomData(customData?: { [key: string]: string | string[] | (() => string) }): void {
     this.customData = customData;
   }
 
   private setupRoutes(): void {
     this.router.get('/', eventHandler(async (event) => {
-      if (!this.emailScanner) {
-        return await this.getPreviewInterface({ files: [], folders: [] });
-      }
-
       const query = getQuery(event);
-      const emailStructure = await this.emailScanner.scanEmails();
+      const activeTab = (query.tab as string) || 'emails';
       
-      if (query.preview) {
-        const content = await this.emailScanner.getEmailContent(query.preview as string);
-        if (content) {
-          const preprocessor = new EmailPreprocessorService();
-          const processedContent = preprocessor.processTemplate(
-            content,
-            './emails',
-            './components',
-            this.customData
-          );
-          
-          return await this.getPreviewInterface(emailStructure, query.preview as string, processedContent);
+      if (activeTab === 'components') {
+        if (!this.componentScanner) {
+          return await this.getPreviewInterface({ files: [], folders: [] }, undefined, undefined, 'components');
         }
+
+        const componentStructure = await this.componentScanner.scanComponents();
+        
+        if (query.preview) {
+          const content = await this.componentScanner.getComponentContent(query.preview as string);
+          if (content) {
+            const preprocessor = new EmailPreprocessorService();
+            const processedContent = preprocessor.processTemplate(
+              content,
+              './emails',
+              './components',
+              this.customData
+            );
+            
+            return await this.getPreviewInterface(componentStructure, query.preview as string, processedContent, 'components');
+          }
+        }
+        
+        return await this.getPreviewInterface(componentStructure, undefined, undefined, 'components');
+      } else {
+        if (!this.emailScanner) {
+          return await this.getPreviewInterface({ files: [], folders: [] }, undefined, undefined, 'emails');
+        }
+
+        const emailStructure = await this.emailScanner.scanEmails();
+        
+        if (query.preview) {
+          const content = await this.emailScanner.getEmailContent(query.preview as string);
+          if (content) {
+            const preprocessor = new EmailPreprocessorService();
+            const processedContent = preprocessor.processTemplate(
+              content,
+              './emails',
+              './components',
+              this.customData
+            );
+            
+            return await this.getPreviewInterface(emailStructure, query.preview as string, processedContent, 'emails');
+          }
+        }
+        
+        return await this.getPreviewInterface(emailStructure, undefined, undefined, 'emails');
       }
-      
-      return await this.getPreviewInterface(emailStructure);
     }));
 
     this.router.get('/health', eventHandler(() => {
@@ -66,13 +99,14 @@ export class H3ServerService {
     }));
   }
 
-  private async getPreviewInterface(emailStructure: EmailStructure, selectedEmail?: string, previewContent?: string): Promise<string> {
+  private async getPreviewInterface(structure: EmailStructure | ComponentStructure, selectedItem?: string, previewContent?: string, activeTab: string = 'emails'): Promise<string> {
     const escapedContent = previewContent?.replace(/"/g, '&quot;');
 
     return this.eta.render('email-preview', {
-      emailStructure,
-      selectedEmail,
-      previewContent: escapedContent
+      structure,
+      selectedItem,
+      previewContent: escapedContent,
+      activeTab
     });
   }
 

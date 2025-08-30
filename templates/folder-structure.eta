@@ -4,8 +4,8 @@ if (it.files && it.files.length > 0) {
     it.files.forEach(function(file) { 
 %>
         <li>
-            <a href="/?preview=<%= file.relativePath %>" 
-               class="<%= it.selectedEmail === file.relativePath ? 'active' : '' %>">
+            <a href="/?tab=<%= it.activeTab || 'emails' %>&preview=<%= file.relativePath %>" 
+               class="<%= it.selectedItem === file.relativePath ? 'active' : '' %>">
                 📄 <%= file.name %>
             </a>
         </li>
@@ -27,7 +27,8 @@ if (it.folders && it.folders.length > 0) {
                     <%~ include('folder-structure', {
                         files: folder.files,
                         folders: folder.subfolders,
-                        selectedEmail: it.selectedEmail
+                        selectedItem: it.selectedItem,
+                        activeTab: it.activeTab
                     }) %>
                 </ul>
             </div>

@@ -9,6 +9,32 @@
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         .container { display: flex; height: 100vh; }
         .sidebar { width: 300px; background: #f5f5f5; border-right: 1px solid #ddd; overflow-y: auto; }
+        .sidebar-tabs { 
+            display: flex; 
+            background: #e8e8e8; 
+            border-bottom: 1px solid #ddd; 
+        }
+        .tab-button { 
+            flex: 1; 
+            padding: 12px 16px; 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-button:hover { 
+            background: #d8d8d8; 
+            color: #333;
+        }
+        .tab-button.active { 
+            background: #f5f5f5; 
+            color: #007acc;
+            border-bottom-color: #007acc;
+        }
         .preview { flex: 1; background: white; display: flex; flex-direction: column; }
         .navbar { 
             display: flex; 
@@ -158,21 +184,36 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <h2>Email Templates</h2>
+            <h2><%= it.activeTab === 'components' ? 'Components' : 'Email Templates' %></h2>
+            <div class="sidebar-tabs">
+                <button class="tab-button <%= it.activeTab === 'emails' ? 'active' : '' %>" onclick="switchTab('emails')">
+                    📧 Emails
+                </button>
+                <button class="tab-button <%= it.activeTab === 'components' ? 'active' : '' %>" onclick="switchTab('components')">
+                    🧩 Components
+                </button>
+            </div>
             <ul>
-                <%~ include('folder-structure', it.emailStructure) %>
-                <% if (it.emailStructure.files.length === 0 && it.emailStructure.folders.length === 0) { %>
-                    <li style="padding: 20px; color: #666;">No email templates found</li>
+                <%~ include('folder-structure', {
+                    files: it.structure.files,
+                    folders: it.structure.folders,
+                    selectedItem: it.selectedItem,
+                    activeTab: it.activeTab
+                }) %>
+                <% if (it.structure.files.length === 0 && it.structure.folders.length === 0) { %>
+                    <li style="padding: 20px; color: #666;">
+                        <%= it.activeTab === 'components' ? 'No components found' : 'No email templates found' %>
+                    </li>
                 <% } %>
             </ul>
         </div>
         <div class="preview">
             <div class="navbar">
                 <div class="navbar-title">
-                    <% if (it.selectedEmail) { %>
-                        <%= it.selectedEmail %>
+                    <% if (it.selectedItem) { %>
+                        <%= it.selectedItem %>
                     <% } else { %>
-                        Email Preview
+                        <%= it.activeTab === 'components' ? 'Component Preview' : 'Email Preview' %>
                     <% } %>
                 </div>
                 <div class="navbar-center">
@@ -193,7 +234,9 @@
                         <iframe srcdoc="<%~ it.previewContent %>" id="previewIframe"></iframe>
                     </div>
                 <% } else { %>
-                    <div class="no-preview">Select an email template to preview</div>
+                    <div class="no-preview">
+                        <%= it.activeTab === 'components' ? 'Select a component to preview' : 'Select an email template to preview' %>
+                    </div>
                 <% } %>
             </div>
         </div>
@@ -268,7 +311,14 @@
             }
         }
 
-        // Auto-expand folders that contain the currently selected email
+        function switchTab(tab) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('tab', tab);
+            urlParams.delete('preview'); // Clear preview when switching tabs
+            window.location.href = '?' + urlParams.toString();
+        }
+
+        // Auto-expand folders that contain the currently selected item
         document.addEventListener('DOMContentLoaded', function() {
             const activeLink = document.querySelector('.sidebar a.active');
             if (activeLink) {
