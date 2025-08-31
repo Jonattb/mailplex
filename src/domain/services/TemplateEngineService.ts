@@ -109,21 +109,28 @@ export class TemplateEngineService {
         lineNumber >= context.start && lineNumber <= context.end
       );
       
-      // Convert {{key, value}} directives
-      line = line.replace(/\{\{([^,}]+),\s*[^}]*\}\}/g, (match, key) => {
+      // Convert {{key+, value}} directives (incremental in loops)
+      line = line.replace(/\{\{([^+,}]+)\+,\s*[^}]*\}\}/g, (match, key) => {
         const cleanKey = key.trim();
         
         if (currentLoop) {
-          // Inside a loop - need to generate multiple indexed versions
+          // Inside a loop - generate indexed versions
           const conversions = [];
           for (let index = 1; index <= currentLoop.count; index++) {
             conversions.push(engine.convertVariable(cleanKey, index));
           }
           return conversions.join('\n' + ' '.repeat(line.indexOf(match))); // Preserve indentation
         } else {
-          // Outside loop - convert normally
+          // Outside loop - treat as normal variable (remove +)
           return engine.convertVariable(cleanKey);
         }
+      });
+      
+      // Convert {{key, value}} directives (non-incremental)
+      line = line.replace(/\{\{([^,}]+),\s*[^}]*\}\}/g, (match, key) => {
+        const cleanKey = key.trim();
+        // Always convert without index for non-incremental variables
+        return engine.convertVariable(cleanKey);
       });
       
       lines[i] = line;

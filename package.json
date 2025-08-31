@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^18.0.0",
+    "tailwindcss": "^4.1.12",
     "typescript": "^5.9.2"
   },
   "files": [

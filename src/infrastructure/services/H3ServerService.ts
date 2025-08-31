@@ -48,6 +48,7 @@ export class H3ServerService {
     this.customData = customData;
   }
 
+
   private setupRoutes(): void {
     this.router.get('/', eventHandler(async (event) => {
       const query = getQuery(event);
@@ -89,7 +90,7 @@ export class H3ServerService {
         return 'Template not found';
       }
 
-      // Handle partial content requests for engine conversion (process structure directives, keep variable directives)
+      // Handle partial content requests (processed structures but preserve variables for engine conversion)
       if (query.partial === 'true' && query.preview) {
         const scanner = activeTab === 'components' ? this.componentScanner : this.emailScanner;
         const getContent = activeTab === 'components' 
@@ -99,9 +100,9 @@ export class H3ServerService {
         if (scanner && getContent) {
           const content = await getContent(query.preview as string);
           if (content) {
-            // Process template partially: handle includes/layouts/loops but preserve {{key, value}} directives
+            // Process only structural directives, preserve {{key, value}} for engine conversion
             const preprocessor = new EmailPreprocessorService();
-            const partialContent = preprocessor.processTemplateForEngineConversion(
+            const partialContent = preprocessor.processStructuralOnly(
               content,
               './emails',
               './components',
@@ -112,6 +113,45 @@ export class H3ServerService {
         }
         return 'Template not found';
       }
+
+      // Handle engine conversion requests
+      if (query.engine && query.preview) {
+        const scanner = activeTab === 'components' ? this.componentScanner : this.emailScanner;
+        const getContent = activeTab === 'components' 
+          ? (scanner as ComponentScannerService)?.getComponentContent.bind(scanner)
+          : (scanner as EmailScannerService)?.getEmailContent.bind(scanner);
+
+        if (scanner && getContent && this.templateEngineService) {
+          const content = await getContent(query.preview as string);
+          if (content) {
+            try {
+              // First process structure directives (layouts, includes, loops)
+              const preprocessor = new EmailPreprocessorService();
+              const structurallyProcessed = preprocessor.processStructuralOnly(
+                content,
+                './emails',
+                './components',
+                this.customData
+              );
+              
+              // Then inline CSS for email compatibility (before engine conversion)
+              const contentWithInlineStyles = preprocessor.inlineCssAndCleanup(structurallyProcessed);
+              
+              // Finally convert to engine format
+              const engineContent = this.templateEngineService.convertToEngine(
+                contentWithInlineStyles, 
+                query.engine as string
+              );
+                
+              return engineContent;
+            } catch (error) {
+              return `Engine conversion error: ${error}`;
+            }
+          }
+        }
+        return 'Template not found';
+      }
+
       
       if (activeTab === 'components') {
         if (!this.componentScanner) {
@@ -197,7 +237,12 @@ export class H3ServerService {
           };
         }
 
-        const convertedContent = this.templateEngineService.convertToEngine(content, engine);
+        // First inline CSS styles for email compatibility (before engine conversion)
+        const preprocessor = new EmailPreprocessorService();
+        const contentWithInlineStyles = preprocessor.inlineCssAndCleanup(content);
+        
+        // Then convert to engine format
+        const convertedContent = this.templateEngineService.convertToEngine(contentWithInlineStyles, engine);
         
         return {
           success: true,
