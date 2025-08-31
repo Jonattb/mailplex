@@ -180,6 +180,49 @@
             content: ' ✓';
         }
         
+        /* Dropdown styles */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: white;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            border-radius: 4px;
+            z-index: 1;
+            border: 1px solid #ddd;
+        }
+        
+        .dropdown-content.show {
+            display: block;
+        }
+        
+        .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-size: 14px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .dropdown-content a:last-child {
+            border-bottom: none;
+        }
+        
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .dropdown-btn::after {
+            margin-left: 6px;
+        }
+        
         /* Validation status styles */
         .validation-icon {
             margin-left: 10px;
@@ -397,7 +440,23 @@
                 </div>
                 <div class="navbar-right">
                     <% if (it.previewContent) { %>
-                        <button class="copy-btn" onclick="copyHTML()">Copy HTML</button>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="copy-btn" onclick="copyHTML()">Copy HTML</button>
+                            <% if (it.engines && it.engines.length > 0) { %>
+                                <div class="dropdown">
+                                    <button class="copy-btn dropdown-btn" onclick="toggleEnginesDropdown()">
+                                        Copy as Engine ▼
+                                    </button>
+                                    <div class="dropdown-content" id="enginesDropdown">
+                                        <% it.engines.forEach(function(engine) { %>
+                                            <a href="#" onclick="copyAsEngine('<%= engine.extension %>')">
+                                                <%= engine.name %> (.<%= engine.extension %>)
+                                            </a>
+                                        <% }); %>
+                                    </div>
+                                </div>
+                            <% } %>
+                        </div>
                     <% } %>
                 </div>
             </div>
@@ -491,16 +550,22 @@
         
         // Copy HTML functionality
         async function copyHTML() {
-            const iframe = document.getElementById('previewIframe');
             const copyBtn = document.querySelector('.copy-btn');
             
-            if (!iframe) return;
+            if (!copyBtn) return;
             
             try {
-                // Get the iframe content (the processed HTML without custom directives)
-                const iframeContent = iframe.getAttribute('srcdoc');
+                // Get the rendered content (processed HTML without preview UI)
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('rendered', 'true');
+                const response = await fetch('?' + urlParams.toString());
                 
-                await navigator.clipboard.writeText(iframeContent);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch rendered content');
+                }
+                
+                const renderedContent = await response.text();
+                await navigator.clipboard.writeText(renderedContent);
                 
                 // Visual feedback
                 const originalText = copyBtn.textContent;
@@ -532,6 +597,80 @@
             const console = document.getElementById('errorConsole');
             console.classList.toggle('open');
         }
+
+        function toggleEnginesDropdown() {
+            const dropdown = document.getElementById('enginesDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        async function copyAsEngine(engineExtension) {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
+            try {
+                // Get the partially processed content (structure directives processed, variables preserved)
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('partial', 'true');
+                const response = await fetch('?' + urlParams.toString());
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch partial content');
+                }
+                
+                const partialContent = await response.text();
+                
+                // Convert to engine format
+                const engineResponse = await fetch('/convert-engine', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: partialContent,
+                        engine: engineExtension
+                    })
+                });
+                
+                if (!engineResponse.ok) {
+                    throw new Error(`HTTP error! status: ${engineResponse.status}`);
+                }
+                
+                const result = await engineResponse.json();
+                
+                if (result.success) {
+                    await navigator.clipboard.writeText(result.content);
+                    
+                    // Show success message
+                    btn.textContent = `Copied as .${engineExtension}!`;
+                    
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                    }, 2000);
+                } else {
+                    throw new Error(result.error || 'Engine conversion failed');
+                }
+                
+            } catch (err) {
+                console.error('Failed to copy as engine:', err);
+                btn.textContent = 'Copy Failed';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 1500);
+            } finally {
+                // Close dropdown
+                toggleEnginesDropdown();
+            }
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(event) {
+            if (!event.target.matches('.dropdown-btn')) {
+                const dropdown = document.getElementById('enginesDropdown');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        });
 
         // Auto-expand folders that contain the currently selected item
         document.addEventListener('DOMContentLoaded', function() {

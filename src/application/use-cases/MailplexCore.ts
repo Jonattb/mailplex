@@ -8,7 +8,7 @@ export class MailplexCore implements IMailplexCore {
   private serverService?: H3ServerService;
   private templateService?: TemplateService;
 
-  configure(config: MailplexConfig): IMailplexCore {
+  async configure(config: MailplexConfig): Promise<IMailplexCore> {
     MailplexConfigValidator.validate(config);
     this.config = config;
     
@@ -21,6 +21,7 @@ export class MailplexCore implements IMailplexCore {
     this.templateService = new TemplateService(config.paths.emails);
     this.serverService.setEmailsPath(config.paths.emails);
     this.serverService.setComponentsPath(config.paths.components);
+    await this.serverService.setEnginesPath(config.paths.engines);
     this.serverService.setCustomData(config.data);
     
     console.log('Mailplex configured with paths:', config.paths);

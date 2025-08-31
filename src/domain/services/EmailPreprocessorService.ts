@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DEFAULT_CUSTOM_DATA } from '../constants/DefaultVariables.js';
+import juice from 'juice';
 
 
 export class EmailPreprocessorService {
@@ -50,7 +51,48 @@ export class EmailPreprocessorService {
       console.log('After loops:', processed.substring(0, 200));
       
       console.log('4. Processing print directives...');
-      const result = this.processPrintDirectives(processed, customData);
+      const processedWithVariables = this.processPrintDirectives(processed, customData);
+      console.log('After print directives:', processedWithVariables.substring(0, 200));
+      
+      console.log('5. Inlining CSS and removing script tags...');
+      const result = this.inlineCssAndCleanup(processedWithVariables);
+      console.log('Final result preview:', result.substring(0, 200));
+      
+      return result;
+    } catch (error) {
+      console.error('Preprocessor error:', error);
+      return template;
+    }
+  }
+
+  /**
+   * Processes template for engine conversion: handles layouts, includes, loops but preserves {{key, value}} directives
+   */
+  processTemplateForEngineConversion(template: string, emailsPath: string = './emails', componentsPath: string = './components', customData?: { [key: string]: string | string[] | (() => string) }): string {
+    try {
+      console.log('=== PROCESSING TEMPLATE FOR ENGINE CONVERSION ===');
+      console.log('Components path:', componentsPath);
+      console.log('Template preview:', template.substring(0, 200));
+      
+      // Process in order: layouts, includes, loops BUT NOT print directives
+      console.log('1. Processing layouts for engine conversion...');
+      let processed = this.processLayoutDirectivesForEngineConversion(template, componentsPath, customData);
+      console.log('After layouts:', processed.substring(0, 200));
+      
+      console.log('2. Processing includes for engine conversion...');
+      processed = this.processIncludeDirectivesForEngineConversion(processed, componentsPath, customData);
+      console.log('After includes:', processed.substring(0, 200));
+      
+      console.log('3. Processing loops...');
+      processed = this.processLoopDirectives(processed);
+      console.log('After loops:', processed.substring(0, 200));
+      
+      console.log('4. Preserving print directives for engine conversion...');
+      // Do NOT process print directives - leave {{key, value}} intact
+      console.log('After preserving print directives:', processed.substring(0, 200));
+      
+      console.log('5. Inlining CSS and removing script tags (for engine conversion)...');
+      const result = this.inlineCssAndCleanup(processed);
       console.log('Final result preview:', result.substring(0, 200));
       
       return result;
@@ -317,5 +359,124 @@ export class EmailPreprocessorService {
     
     console.log(`Layout processing done. Found ${template.match(/\{\{layout\s+['"]([^'"]+)['"]\}\}/g)?.length || 0} layouts`);
     return result;
+  }
+
+  /**
+   * Process layout directives for engine conversion (without processing variables)
+   */
+  private processLayoutDirectivesForEngineConversion(template: string, componentsPath: string, customData?: { [key: string]: string | string[] | (() => string) }): string {
+    console.log('Looking for layout directives (engine conversion)...');
+    
+    // Process {{layout 'layout_name'}} ... {{/layout}} patterns
+    const result = template.replace(/\{\{layout\s+['"]([^'"]+)['"]\}\}([\s\S]*?)\{\{\/layout\}\}/g, (match, layoutName, content) => {
+      console.log(`Found layout directive: {{layout '${layoutName}'}}`);
+      console.log(`Content length: ${content.length}`);
+      
+      try {
+        const layoutPath = join(componentsPath, `${layoutName}.html`);
+        console.log(`Reading layout from: ${layoutPath}`);
+        
+        const layoutContent = readFileSync(layoutPath, 'utf-8');
+        console.log(`Layout content preview: ${layoutContent.substring(0, 100)}`);
+        
+        // Replace {{content}} in layout with the actual content
+        const processedLayout = layoutContent.replace(/\{\{content\}\}/g, content);
+        console.log(`Layout after content replacement: ${processedLayout.substring(0, 100)}`);
+        
+        // Recursively process the layout (for engine conversion)
+        return this.processTemplateForEngineConversion(processedLayout, componentsPath, componentsPath, customData);
+      } catch (error) {
+        console.warn(`Error processing layout ${layoutName}:`, error);
+        return match; // Return original directive if error
+      }
+    });
+    
+    console.log(`Layout processing done. Found ${template.match(/\{\{layout\s+['"]([^'"]+)['"]\}\}/g)?.length || 0} layouts`);
+    return result;
+  }
+
+  /**
+   * Process include directives for engine conversion (without processing variables)
+   */
+  private processIncludeDirectivesForEngineConversion(template: string, componentsPath: string, customData?: { [key: string]: string | string[] | (() => string) }): string {
+    console.log('Looking for include and component directives (engine conversion)...');
+    
+    // Process {{component "component_name"}} patterns  
+    let result = template.replace(/\{\{component\s+['"]([^'"]+)['"]\}\}/g, (match, componentName) => {
+      console.log(`Found component directive: ${match}`);
+      try {
+        const componentPath = join(componentsPath, `${componentName}.html`);
+        console.log(`Reading component from: ${componentPath}`);
+        
+        const componentContent = readFileSync(componentPath, 'utf-8');
+        console.log(`Component content preview: ${componentContent.substring(0, 100)}`);
+        
+        // Recursively process the included component (for engine conversion)
+        return this.processTemplateForEngineConversion(componentContent, componentsPath, componentsPath, customData);
+      } catch (error) {
+        console.warn(`Error including component ${componentName}:`, error);
+        return match; // Return original directive if error
+      }
+    });
+    
+    // Process {{include 'component_name'}} patterns
+    result = result.replace(/\{\{include\s+['"]([^'"]+)['"]\}\}/g, (match, componentName) => {
+      console.log(`Found include directive: ${match}`);
+      try {
+        const componentPath = join(componentsPath, `${componentName}.html`);
+        console.log(`Reading component from: ${componentPath}`);
+        
+        const componentContent = readFileSync(componentPath, 'utf-8');
+        console.log(`Component content preview: ${componentContent.substring(0, 100)}`);
+        
+        // Recursively process the included component (for engine conversion)
+        return this.processTemplateForEngineConversion(componentContent, componentsPath, componentsPath, customData);
+      } catch (error) {
+        console.warn(`Error including component ${componentName}:`, error);
+        return match; // Return original directive if error
+      }
+    });
+    
+    const includeCount = (template.match(/\{\{include\s+['"]([^'"]+)['"]\}\}/g) || []).length;
+    const componentCount = (template.match(/\{\{component\s+['"]([^'"]+)['"]\}\}/g) || []).length;
+    console.log(`Include processing done. Found ${componentCount} components and ${includeCount} includes`);
+    return result;
+  }
+
+  /**
+   * Inlines CSS from <style> tags and removes <script> tags for email compatibility
+   */
+  private inlineCssAndCleanup(html: string): string {
+    try {
+      console.log('Starting CSS inlining process...');
+      
+      // First, remove all <script> tags and their content
+      let cleanedHtml = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      
+      // Also remove any remaining <script> tags without closing tags
+      cleanedHtml = cleanedHtml.replace(/<script[^>]*>/gi, '');
+      
+      console.log('Script tags removed');
+      
+      // Use juice to inline CSS
+      const inlinedHtml = juice(cleanedHtml, {
+        removeStyleTags: true,       // Remove <style> tags after inlining
+        preserveImportant: true,     // Keep !important declarations
+        preserveMediaQueries: false, // Remove media queries (not supported in most email clients)
+        preserveFontFaces: false,    // Remove @font-face (not supported in most email clients)
+        applyWidthAttributes: true,  // Convert width CSS to width attributes
+        applyHeightAttributes: true, // Convert height CSS to height attributes
+        applyAttributesTableElements: true, // Apply attributes to table elements
+        xmlMode: false               // HTML mode, not XML
+      });
+      
+      console.log('CSS inlined successfully');
+      return inlinedHtml;
+      
+    } catch (error) {
+      console.error('Error during CSS inlining:', error);
+      // Return original HTML with just script tags removed as fallback
+      return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    }
   }
 }
