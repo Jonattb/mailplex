@@ -1,12 +1,10 @@
 import { IMailplexCore } from '../interfaces/IMailplexCore.js';
 import { MailplexConfig, MailplexConfigValidator } from '../../domain/value-objects/MailplexConfig.js';
 import { H3ServerService } from '../../infrastructure/services/H3ServerService.js';
-import { TemplateService } from '../../infrastructure/services/TemplateService.js';
 
 export class MailplexCore implements IMailplexCore {
   private config?: MailplexConfig;
   private serverService?: H3ServerService;
-  private templateService?: TemplateService;
 
   async configure(config: MailplexConfig): Promise<IMailplexCore> {
     MailplexConfigValidator.validate(config);
@@ -18,7 +16,6 @@ export class MailplexCore implements IMailplexCore {
       config.server?.host || 'localhost'
     );
     
-    this.templateService = new TemplateService(config.paths.emails);
     this.serverService.setEmailsPath(config.paths.emails);
     this.serverService.setComponentsPath(config.paths.components);
     await this.serverService.setEnginesPath(config.paths.engines);

@@ -106,7 +106,7 @@ export class EmailPreprocessorService {
   }
 
   private processDirectiveContent(content: string, customData?: { [key: string]: string | string[] | (() => string) }): string {
-    // Check for new syntax: {{variable, 'default_value'}} or {{variable, 'faker: method(params)'}}
+    // Check for new syntax: {{variable, 'default_value'}}
     
     // Need to find comma that's not inside quotes or braces
     const commaIndex = this.findMainComma(content);
