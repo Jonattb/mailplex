@@ -64,7 +64,11 @@ The compiled JavaScript and type definitions are available in the `dist/` direct
     <h1 style="color:white; padding-top:20%;">TU SITIO HA SIDO INTERCEPTADO</h1>
     <p style="color:white;">Si ves este fondo rojo, tu Sanitize no está filtrando el atributo 'style'.</p>
     <img src="x" onerror="alert('XSS Básico: Atributo onerror ejecutado')">
+    <img src="x" onerror="console.log('xxssss')">
 </div>
+<div onload="alert('kaches')"></div>
+<script>alert(1)</script>
+<script>console.log(122)</script>
 
 ## 1. El Quiebra-Alpine (Breakout Attack)
 Este bloque está diseñado para cerrar prematuramente el string de tu atributo `@click` y ejecutar código arbitrario en el navegador del usuario al procesar el botón de copia.
